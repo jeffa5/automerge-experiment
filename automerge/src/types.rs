@@ -174,6 +174,7 @@ impl From<ElemId> for Key {
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Hash)]
 pub enum Key {
+    /// Index into a cache with the actual key.
     Map(usize),
     Seq(ElemId),
 }

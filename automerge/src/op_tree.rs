@@ -11,11 +11,15 @@ use crate::{IndexedCache, Key, Op, OpId, ScalarValue};
 use automerge_protocol as amp;
 use std::collections::{HashMap, HashSet};
 
+/// A tree of operations, supporting efficient lookups in different ways.
 pub(crate) type OpTree = OpTreeInternal<64>;
 
+/// Index metadata about a set of operations.
 #[derive(Clone, Debug)]
 pub(crate) struct OpSetMetadata {
+    /// Cache of actor ids.
     pub actors: IndexedCache<amp::ActorId>,
+    /// Cache of keys.
     pub props: IndexedCache<String>,
 }
 
@@ -39,18 +43,27 @@ impl OpSetMetadata {
     }
 }
 
+/// The tree of operations.
 #[derive(Clone, Debug)]
 pub(crate) struct OpTreeInternal<const B: usize> {
-    pub m: OpSetMetadata,
+    /// Metadata about the set of operations contained in this tree.
+    pub metadata: OpSetMetadata,
+    /// The root node, if there is one.
     root_node: Option<OpTreeNode<B>>,
 }
 
+/// A node of the tree.
 #[derive(Clone, Debug)]
 pub(crate) struct OpTreeNode<const B: usize> {
+    /// Operations in this node.
     elements: Vec<Op>,
+    /// Children nodes.
     children: Vec<OpTreeNode<B>>,
+    /// Search index...
     pub index: Index,
+    /// depth of the tree at this point?
     depth: usize,
+    /// Length of the list rooted at this node.
     length: usize,
 }
 
@@ -59,7 +72,7 @@ impl<const B: usize> OpTreeInternal<B> {
     pub fn new() -> Self {
         Self {
             root_node: None,
-            m: OpSetMetadata {
+            metadata: OpSetMetadata {
                 actors: IndexedCache::new(),
                 props: IndexedCache::new(),
             },
@@ -69,7 +82,7 @@ impl<const B: usize> OpTreeInternal<B> {
     pub fn with_actor(actor: amp::ActorId) -> Self {
         Self {
             root_node: None,
-            m: OpSetMetadata {
+            metadata: OpSetMetadata {
                 actors: IndexedCache::from(vec![actor]),
                 props: IndexedCache::new(),
             },
@@ -91,16 +104,17 @@ impl<const B: usize> OpTreeInternal<B> {
         }
     }
 
+    /// Search the tree.
     pub fn search<Q>(&self, mut query: Q) -> Q
     where
         Q: TreeQuery<B>,
     {
-        self.root_node
-            .as_ref()
-            .map(|root| match query.query_node_with_metadata(root, &self.m) {
-                QueryResult::Decend => root.search(&mut query, &self.m),
+        self.root_node.as_ref().map(|root| {
+            match query.query_node_with_metadata(root, &self.metadata) {
+                QueryResult::Descend => root.search(&mut query, &self.metadata),
                 _ => true,
-            });
+            }
+        });
         query
     }
 
@@ -281,7 +295,7 @@ impl<const B: usize> OpTreeNode<B> {
         } else {
             for (child_index, child) in self.children.iter().enumerate() {
                 match query.query_node_with_metadata(child, m) {
-                    QueryResult::Decend => {
+                    QueryResult::Descend => {
                         if child.search(query, m) {
                             return true;
                         }

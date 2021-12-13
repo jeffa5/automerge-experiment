@@ -72,10 +72,11 @@ pub(crate) trait TreeQuery<const B: usize> {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum QueryResult {
     Next,
-    Decend,
+    Descend,
     Finish,
 }
 
+/// Search index.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Index {
     pub visible: HashMap<ObjId, HashMap<ElemId, usize, FxBuildHasher>, FxBuildHasher>,

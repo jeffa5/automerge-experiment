@@ -7,9 +7,12 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::ops::Index;
 
+/// A cache of values with efficient lookup by value and index.
 #[derive(Debug, Clone)]
 pub(crate) struct IndexedCache<T> {
+    /// Store of values for access by index.
     pub cache: Vec<T>,
+    /// Store of values for access by value.
     lookup: HashMap<T, usize>,
 }
 
@@ -33,6 +36,7 @@ where
         IndexedCache { cache, lookup }
     }
 
+    /// Cache the value and return the index of it in the cache.
     pub fn cache(&mut self, item: T) -> usize {
         if let Some(n) = self.lookup.get(&item) {
             *n
@@ -44,18 +48,23 @@ where
         }
     }
 
+    /// Find the index of an item.
     pub fn lookup(&self, item: T) -> Option<usize> {
-        self.lookup.get(&item).cloned()
+        self.lookup.get(&item).copied()
     }
 
     pub fn len(&self) -> usize {
         self.cache.len()
     }
 
+    /// Find a value by index.
     pub fn get(&self, index: usize) -> &T {
+        // TODO: what if the index isn't in the range?
+        // could add an assert with a useful explanation of why this shouldn't happen
         &self.cache[index]
     }
 
+    /// Return a copy of this cache based on a sorted list.
     pub fn sorted(&self) -> IndexedCache<T> {
         let mut sorted = Self::new();
         self.cache.iter().sorted().cloned().for_each(|item| {
